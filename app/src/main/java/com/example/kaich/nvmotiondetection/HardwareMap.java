@@ -11,4 +11,9 @@ public class HardwareMap {
 
     public int displayWidth;
     public int displayHeight;
+
+    public HardwareMap(){
+
+    }
+
 }
