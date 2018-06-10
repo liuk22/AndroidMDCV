@@ -21,12 +21,6 @@ public class VisionProcess {
 
     }
 
-    public Surface showFrame(){
 
-    }
-
-    public Surface showAnalyzedFrame(){
-
-    }
 
 }
