@@ -15,11 +15,22 @@ public class VisionProcess {
     private int xRes;
     private int yRes;
 
+    private int brightness;
+
+    private Mat mat;
+
     public VisionProcess(int xRes, int yRes) {
         this.xRes = xRes;
         this.yRes = yRes;
+    }
+
+
+
+    public void setBrightness(int brightness){
 
     }
+
+
 
 
 

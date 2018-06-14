@@ -31,8 +31,7 @@ public class MainActivity extends AppCompatActivity {
     //UI
     private Toolbar mTopToolbar;
     private SeekBar mSeekBar;
-    private SeekBar.OnSeekBarChangeListener mOnSeekBarChangeListener
-            = new SeekBar.OnSeekBarChangeListener(){
+    private SeekBar.OnSeekBarChangeListener mOnSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener(){
         @Override
         public void onProgressChanged(SeekBar seekbar, int progress, boolean b){
 
@@ -62,6 +61,27 @@ public class MainActivity extends AppCompatActivity {
     };
     private TextureView mTextureView;
     private Toolbar mBottomToolbar;
+    private ImageButton mCameraButton;
+    private ImageButton.OnClickListener mOnCameraClickListener = new ImageButton.OnClickListener(){
+        @Override
+        public void onClick(View view){
+
+        }
+    };
+    private ImageButton mRecordTypeButton;
+    private ImageButton.OnClickListener mOnRecordTypeClickListener = new ImageButton.OnClickListener(){
+        @Override
+        public void onClick(View view){
+
+        }
+    };
+    private ImageButton mSwitchCameraButton;
+    private ImageButton.OnClickListener mOnSwitchCameraClickListener = new ImageButton.OnClickListener(){
+        @Override
+        public void onClick(View view){
+
+        }
+    };
 
     //analytical
     private VisionProcess mVisionProcess;
@@ -89,6 +109,12 @@ public class MainActivity extends AppCompatActivity {
         mTextureView = findViewById(R.id.textureView);
 
         mBottomToolbar = findViewById(R.id.bottomToolbar);
+        mCameraButton = findViewById(R.id.cameraButton);
+        mCameraButton.setOnClickListener(mOnCameraClickListener);
+        mRecordTypeButton = findViewById(R.id.recordTypeButton);
+        mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
+        mSwitchCameraButton = findViewById(R.id.switchCameraButton);
+        mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
 
     }
 
@@ -124,5 +150,6 @@ public class MainActivity extends AppCompatActivity {
     private void takeVideo(){
 
     }
+
 
 }
