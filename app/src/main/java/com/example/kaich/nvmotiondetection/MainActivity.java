@@ -126,12 +126,13 @@ public class MainActivity extends AppCompatActivity {
 
         //listeners not set until permissions granted
 
-        if(ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA},MY_PERMISSIONS_REQUEST_CAMERA);
-        }else if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
+        if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(getParent(), new String[]{Manifest.permission.CAMERA},MY_PERMISSIONS_REQUEST_CAMERA);
+        }else if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+            ActivityCompat.requestPermissions(getParent(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
         }else{
             //all permissions already granted
+            //new thread to open camera?
             openCamera();
         }
 
@@ -176,14 +177,15 @@ public class MainActivity extends AppCompatActivity {
             case MY_PERMISSIONS_REQUEST_CAMERA: //consecutive permission requests
                 if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
 
-                    if(ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-                        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
+                    if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
+                        ActivityCompat.requestPermissions(getParent(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
                     }else{
                         //permission already granted
                     }
 
                 }else{
-                    Toast.makeText(this, "This application cannot function without camera permissions", 3);
+                    Toast toast = Toast.makeText(getApplicationContext(), "This application cannot function without camera permissions", Toast.LENGTH_SHORT);
+                    toast.show();
                 }
                 return;
             case MY_PERMISSIONS_REQUEST_STORAGE: //can also feed from if user exited after first permission
@@ -201,7 +203,8 @@ public class MainActivity extends AppCompatActivity {
 
 
                 }else{
-                    Toast.makeText(this, "This application cannot function without storage permissions", 3);
+                    Toast toast = Toast.makeText(getApplicationContext(), "This application cannot function without storage permissions", Toast.LENGTH_SHORT);
+                    toast.show();
                 }
                 return;
         }
