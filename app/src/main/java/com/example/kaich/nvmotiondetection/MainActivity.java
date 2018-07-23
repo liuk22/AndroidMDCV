@@ -1,15 +1,17 @@
 package com.example.kaich.nvmotiondetection;
 
-
 import android.Manifest;
-import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.ImageFormat;
-import android.hardware.camera2.CameraAccessException;
+import android.graphics.Camera;
+import android.graphics.Paint;
+import android.graphics.SurfaceTexture;
+import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureRequest;
+import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Handler;
@@ -18,6 +20,8 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
+import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
@@ -25,17 +29,11 @@ import android.widget.ImageButton;
 import android.widget.SeekBar;
 import android.support.v7.widget.Toolbar;
 import android.widget.Toast;
-import android.widget.VideoView;
-import android.util.Size;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
-
-    //HSI
-    private CameraDevice mCameraDevice;
 
     //UI
     private Toolbar mTopToolbar;
@@ -68,7 +66,9 @@ public class MainActivity extends AppCompatActivity {
 
         }
     };
+
     private TextureView mTextureView;
+
     private Toolbar mBottomToolbar;
     private ImageButton mCameraButton;
     private ImageButton.OnClickListener mOnCameraClickListener = new ImageButton.OnClickListener(){
@@ -96,13 +96,38 @@ public class MainActivity extends AppCompatActivity {
     private static final int MY_PERMISSIONS_REQUEST_CAMERA = 500;
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 600;
 
-    //analytical
-    private VisionProcess VisionProcess;
+    //camera
+    private CameraDevice cameraDevice;
+    private ImageReader imageReader;
+    private Size imageDimension;
+    private CaptureRequest.Builder captureRequestBuilder;
+    private CameraCaptureSession cameraCaptureSession;
+    private CameraDevice.StateCallback stateCallBack = new CameraDevice.StateCallback() {
+        @Override
+        public void onOpened(@NonNull CameraDevice camera) {
+            cameraDevice = camera;
+
+        }
+
+        @Override
+        public void onDisconnected(@NonNull CameraDevice camera) {
+            cameraDevice.close();
+        }
+
+        @Override
+        public void onError(@NonNull CameraDevice camera, int error) {
+            cameraDevice.close();
+            cameraDevice = null;
+        }
+    };
+
+    //vision
+    private VisionProcess visionProcess;
 
     //file storage
-    private File File;
-    private Handler BackgroundHandler;
-    private HandlerThread BackgroundThread;
+    private File file;
+    private Handler backgroundHandler;
+    private HandlerThread backgroundThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -117,8 +142,8 @@ public class MainActivity extends AppCompatActivity {
         mSunBrightness = findViewById(R.id.sunBrightness);
         mMoonBrightness = findViewById(R.id.moonBrightness);
 
-
         mTextureView = findViewById(R.id.textureView);
+
         mBottomToolbar = findViewById(R.id.bottomToolbar);
         mCameraButton = findViewById(R.id.cameraButton);
         mRecordTypeButton = findViewById(R.id.recordTypeButton);
@@ -132,37 +157,95 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(getParent(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
         }else{
             //all permissions already granted
-            //new thread to open camera?
-            openCamera();
+
+            mSeekBar.setOnSeekBarChangeListener((mOnSeekBarChangeListener));
+            mSunBrightness.setOnClickListener(mOnSunBrightnessClickListnener);
+            mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
+
+            mTextureView = findViewById(R.id.textureView);
+
+            mCameraButton.setOnClickListener(mOnCameraClickListener);
+            mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
+            mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
+
+            openCameraAndPreview();
+
         }
 
     }
 
-    private void openCamera(){
+    @Override
+    protected void onResume(){
+        super.onResume();
+        backgroundThread();
+    }
 
+    private void openCameraAndPreview(){
+        updateCamera(0);
+        try {
+            SurfaceTexture surfaceTexture = mTextureView.getSurfaceTexture();
+            assert surfaceTexture != null;
+            surfaceTexture.setDefaultBufferSize(imageDimension.getWidth(), imageDimension.getHeight());
+            Surface surface = new Surface(surfaceTexture);
+            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            captureRequestBuilder.addTarget(surface);
+            cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    if (cameraDevice == null) {
+                        return;
+                    }
+                    cameraCaptureSession = session;
+                    updatePreview();
+                }
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession){ //apparently this is supposed to be "Changed" ...?
+                    Toast toast = Toast.makeText(getApplicationContext(), "Failed to configure camera", Toast.LENGTH_SHORT);
+                    toast.show();
+                }
+            }, null);
+        }catch(Exception e){
+            Log.e(null,Log.getStackTraceString(e), e);
+        }
+    }
+
+    private void updateCamera(int cameraIndex){ //cameraIndex = 0 is main camera, 1 should be rear facing
+        CameraManager cameraManager = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
+        try{
+            String cameraId = cameraManager.getCameraIdList()[cameraIndex];
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+            StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            assert map != null;
+            imageDimension = map.getOutputSizes(SurfaceTexture.class)[0];
+
+            if(ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED){
+                cameraManager.openCamera(cameraId, stateCallBack, null);
+            }else{
+                throw new Exception(); //should find more elegant way to phrase lines 221 to 224
+            }
+
+        }
+
+        catch(Exception e){
+
+        }
+    }
+
+    private void updatePreview(){
+        if(cameraDevice == null){
+            Toast toast = Toast.makeText(this,"Error: CameraDevice not found", Toast.LENGTH_SHORT);
+            toast.show();
+            toast.cancel();
+        }
+        captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
+        try{
+            cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(),null, backgroundHandler);
+        }catch(Exception e){
+            Log.e(null, Log.getStackTraceString(e), e);
+        }
     }
 
     private void takePicture(){
-        if(mCameraDevice == null) {
-            return;
-        }
-        CameraManager manager = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
-        try{
-            CameraCharacteristics characteristics = manager.getCameraCharacteristics(mCameraDevice.getId());
-            Size[] jpegSizes = null;
-            if(characteristics != null){
-                jpegSizes = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
-            }else{ //set default image size here
-                jpegSizes[0] = new Size(1280, 720); //max OpenCV offers
-            }
-            ImageReader reader = ImageReader.newInstance(jpegSizes[0].getWidth(), jpegSizes[0].getHeight(), ImageFormat.JPEG, 1);
-            List<Surface> outputSurface = new ArrayList<>(2);
-            outputSurface.add(reader.getSurface());
-            outputSurface.add(new Surface(mTextureView.getSurfaceTexture()));
-
-        }catch(CameraAccessException e){
-            e.printStackTrace();
-        }
 
     }
 
@@ -170,6 +253,13 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    private void closeCamera(){
+
+    }
+
+    private void backgroundThread(){
+
+    }
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
@@ -181,6 +271,7 @@ public class MainActivity extends AppCompatActivity {
                         ActivityCompat.requestPermissions(getParent(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
                     }else{
                         //permission already granted
+                        openCameraAndPreview();
                     }
 
                 }else{
@@ -201,6 +292,7 @@ public class MainActivity extends AppCompatActivity {
                     mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
                     mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
 
+                    openCameraAndPreview();
 
                 }else{
                     Toast toast = Toast.makeText(getApplicationContext(), "This application cannot function without storage permissions", Toast.LENGTH_SHORT);
@@ -210,4 +302,5 @@ public class MainActivity extends AppCompatActivity {
         }
 
     }
+
 }

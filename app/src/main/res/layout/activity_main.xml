@@ -28,7 +28,6 @@
         android:layout_marginEnd="24dp"
         android:layout_marginStart="12dp"
         android:background="?android:attr/colorPrimary"
-        app:layout_constraintBottom_toTopOf="@+id/textureView"
         app:layout_constraintEnd_toStartOf="@+id/seekBar"
         app:layout_constraintHorizontal_bias="1.0"
         app:layout_constraintStart_toStartOf="@+id/topToolbar"
@@ -42,7 +41,6 @@
         android:layout_marginEnd="12dp"
         android:layout_marginStart="12dp"
         android:background="?android:attr/colorPrimary"
-        app:layout_constraintBottom_toTopOf="@+id/textureView"
         app:layout_constraintEnd_toEndOf="@+id/topToolbar"
         app:layout_constraintStart_toEndOf="@+id/seekBar"
         app:layout_constraintTop_toTopOf="parent"
@@ -62,17 +60,6 @@
         app:layout_constraintHorizontal_bias="0.0"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
-    <TextureView
-        android:id="@+id/textureView"
-        android:layout_width="wrap_content"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/bottomToolbar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.517"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/topToolbar"
-        app:layout_constraintVertical_bias="0.0" />
 
     <android.support.v7.widget.Toolbar
         android:id="@+id/bottomToolbar"
@@ -127,6 +114,15 @@
         app:layout_constraintStart_toEndOf="@+id/cameraButton"
         app:layout_constraintTop_toTopOf="@+id/cameraButton"
         app:srcCompat="@drawable/ic_switch_camera_48dp" />
+
+    <TextureView
+        android:id="@+id/textureView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@+id/bottomToolbar"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/topToolbar" />
 
 
 </android.support.constraint.ConstraintLayout>

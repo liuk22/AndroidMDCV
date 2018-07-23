@@ -4,6 +4,8 @@ import android.view.Surface;
 
 import org.opencv.core.Mat;
 
+import java.io.File;
+
 public class VisionProcess {
     /*
     take a look at these HSV values for a dark room
@@ -12,6 +14,7 @@ public class VisionProcess {
     to
     Scalar(180, 255, 197)
      */
+
     private int xRes;
     private int yRes;
 
@@ -24,9 +27,20 @@ public class VisionProcess {
         this.yRes = yRes;
     }
 
+    private File analyze(File file){
 
+        return file;
+    }
 
-    public void setBrightness(int brightness){
+    private void imageAnalysis(){
+
+    }
+
+    private void videoAnalysis(){
+
+    }
+
+    private void setBrightness(int brightness){
 
     }
 
