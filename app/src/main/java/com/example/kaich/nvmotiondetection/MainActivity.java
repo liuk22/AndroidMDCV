@@ -3,8 +3,6 @@ package com.example.kaich.nvmotiondetection;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.graphics.Camera;
-import android.graphics.Paint;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -13,6 +11,7 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.ImageReader;
+import android.nfc.Tag;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -37,7 +36,7 @@ public class MainActivity extends AppCompatActivity {
 
     //UI
     private Toolbar mTopToolbar;
-    private SeekBar mSeekBar;
+    private SeekBar mSeekBar; //range of 5
     private SeekBar.OnSeekBarChangeListener mOnSeekBarChangeListener = new SeekBar.OnSeekBarChangeListener(){
         @Override
         public void onProgressChanged(SeekBar seekbar, int progress, boolean b){
@@ -56,32 +55,62 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton.OnClickListener mOnSunBrightnessClickListnener = new ImageButton.OnClickListener() {
         @Override
         public void onClick(View view) {
-
+            mSeekBar.incrementProgressBy(-1);
         }
     };
     private ImageButton mMoonBrightness;
     private ImageButton.OnClickListener mOnMoonBrightnessClickListener = new ImageButton.OnClickListener(){
         @Override
         public void onClick(View view){
-
+            mSeekBar.incrementProgressBy(1);
         }
     };
 
     private TextureView mTextureView;
+    private TextureView.SurfaceTextureListener mTextureViewSurfaceListener = new TextureView.SurfaceTextureListener() {
+        @Override
+        public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+
+        }
+
+        @Override
+        public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+
+        }
+
+        @Override
+        public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+            return false;
+        }
+
+        @Override
+        public void onSurfaceTextureUpdated(SurfaceTexture surface) {
+
+        }
+    };
 
     private Toolbar mBottomToolbar;
     private ImageButton mCameraButton;
     private ImageButton.OnClickListener mOnCameraClickListener = new ImageButton.OnClickListener(){
         @Override
         public void onClick(View view){
-
+            if(MY_RECORDING_TYPE){
+                takePicture();
+            }else{
+                takeVideo();
+            }
         }
     };
     private ImageButton mRecordTypeButton;
     private ImageButton.OnClickListener mOnRecordTypeClickListener = new ImageButton.OnClickListener(){
         @Override
         public void onClick(View view){
-
+            MY_RECORDING_TYPE ^= true;
+            if(MY_RECORDING_TYPE){
+                mRecordTypeButton.setBackgroundResource(R.drawable.ic_photo_mode_48dp);
+            }else{
+                mRecordTypeButton.setBackgroundResource(R.drawable.ic_video_mode_48dp);
+            }
         }
     };
     private ImageButton mSwitchCameraButton;
@@ -97,6 +126,7 @@ public class MainActivity extends AppCompatActivity {
     private static final int MY_PERMISSIONS_REQUEST_STORAGE = 600;
 
     //camera
+    private boolean MY_RECORDING_TYPE = true; //true for photo, false for video
     private CameraDevice cameraDevice;
     private ImageReader imageReader;
     private Size imageDimension;
@@ -105,8 +135,10 @@ public class MainActivity extends AppCompatActivity {
     private CameraDevice.StateCallback stateCallBack = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
+            Log.e(null, "onOpened");
             cameraDevice = camera;
-
+            assert mTextureView.isAvailable();
+            openCameraAndPreview();
         }
 
         @Override
@@ -143,6 +175,7 @@ public class MainActivity extends AppCompatActivity {
         mMoonBrightness = findViewById(R.id.moonBrightness);
 
         mTextureView = findViewById(R.id.textureView);
+        mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
 
         mBottomToolbar = findViewById(R.id.bottomToolbar);
         mCameraButton = findViewById(R.id.cameraButton);
@@ -152,9 +185,9 @@ public class MainActivity extends AppCompatActivity {
         //listeners not set until permissions granted
 
         if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(getParent(), new String[]{Manifest.permission.CAMERA},MY_PERMISSIONS_REQUEST_CAMERA);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA},MY_PERMISSIONS_REQUEST_CAMERA);
         }else if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(getParent(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
         }else{
             //all permissions already granted
 
@@ -163,21 +196,14 @@ public class MainActivity extends AppCompatActivity {
             mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
 
             mTextureView = findViewById(R.id.textureView);
+            mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
 
             mCameraButton.setOnClickListener(mOnCameraClickListener);
             mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
             mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
 
-            openCameraAndPreview();
-
         }
 
-    }
-
-    @Override
-    protected void onResume(){
-        super.onResume();
-        backgroundThread();
     }
 
     private void openCameraAndPreview(){
@@ -187,7 +213,7 @@ public class MainActivity extends AppCompatActivity {
             assert surfaceTexture != null;
             surfaceTexture.setDefaultBufferSize(imageDimension.getWidth(), imageDimension.getHeight());
             Surface surface = new Surface(surfaceTexture);
-            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW); //FIX THIS CAMERADEVICE IS NULL
             captureRequestBuilder.addTarget(surface);
             cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
                 @Override
@@ -217,17 +243,10 @@ public class MainActivity extends AppCompatActivity {
             StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
             assert map != null;
             imageDimension = map.getOutputSizes(SurfaceTexture.class)[0];
+            cameraManager.openCamera(cameraId, stateCallBack, null); //permissions have already been previously checked in onCreate()
 
-            if(ActivityCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED){
-                cameraManager.openCamera(cameraId, stateCallBack, null);
-            }else{
-                throw new Exception(); //should find more elegant way to phrase lines 221 to 224
-            }
-
-        }
-
-        catch(Exception e){
-
+        }catch(Exception e){
+            Log.e(null, Log.getStackTraceString(e), e);
         }
     }
 
@@ -260,6 +279,7 @@ public class MainActivity extends AppCompatActivity {
     private void backgroundThread(){
 
     }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
 
@@ -268,10 +288,21 @@ public class MainActivity extends AppCompatActivity {
                 if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
 
                     if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-                        ActivityCompat.requestPermissions(getParent(), new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
+                        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
                     }else{
                         //permission already granted
-                        openCameraAndPreview();
+
+                        mSeekBar.setOnSeekBarChangeListener((mOnSeekBarChangeListener));
+                        mSunBrightness.setOnClickListener(mOnSunBrightnessClickListnener);
+                        mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
+
+                        mTextureView = findViewById(R.id.textureView);
+                        mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener) ;
+
+                        mCameraButton.setOnClickListener(mOnCameraClickListener);
+                        mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
+                        mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
+
                     }
 
                 }else{
@@ -288,11 +319,13 @@ public class MainActivity extends AppCompatActivity {
                     mSunBrightness.setOnClickListener(mOnSunBrightnessClickListnener);
                     mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
 
+                    mTextureView = findViewById(R.id.textureView);
+                    mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener) ;
+
                     mCameraButton.setOnClickListener(mOnCameraClickListener);
                     mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
                     mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
 
-                    openCameraAndPreview();
 
                 }else{
                     Toast toast = Toast.makeText(getApplicationContext(), "This application cannot function without storage permissions", Toast.LENGTH_SHORT);
