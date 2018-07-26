@@ -3,6 +3,7 @@ package com.example.kaich.nvmotiondetection;
 import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -71,6 +72,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
 
+            updateCamera(0);
         }
 
         @Override
@@ -135,7 +137,6 @@ public class MainActivity extends AppCompatActivity {
     private CameraDevice.StateCallback stateCallBack = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
-            Log.e(null, "onOpened");
             cameraDevice = camera;
             assert mTextureView.isAvailable();
             openCameraAndPreview();
@@ -154,7 +155,7 @@ public class MainActivity extends AppCompatActivity {
     };
 
     //vision
-    private VisionProcess visionProcess;
+    private VisionProcess visionProcess = new VisionProcess();
 
     //file storage
     private File file;
@@ -175,7 +176,6 @@ public class MainActivity extends AppCompatActivity {
         mMoonBrightness = findViewById(R.id.moonBrightness);
 
         mTextureView = findViewById(R.id.textureView);
-        mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
 
         mBottomToolbar = findViewById(R.id.bottomToolbar);
         mCameraButton = findViewById(R.id.cameraButton);
@@ -203,17 +203,17 @@ public class MainActivity extends AppCompatActivity {
             mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
 
         }
-
     }
 
     private void openCameraAndPreview(){
-        updateCamera(0);
         try {
             SurfaceTexture surfaceTexture = mTextureView.getSurfaceTexture();
-            assert surfaceTexture != null;
-            surfaceTexture.setDefaultBufferSize(imageDimension.getWidth(), imageDimension.getHeight());
+            if(surfaceTexture == null){
+                Log.e(null, "SURFACETEXTURE IS NULL");
+            }
+            surfaceTexture.setDefaultBufferSize(imageDimension.getWidth(), imageDimension.getHeight());//null???
             Surface surface = new Surface(surfaceTexture);
-            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW); //FIX THIS CAMERADEVICE IS NULL
+            captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             captureRequestBuilder.addTarget(surface);
             cameraDevice.createCaptureSession(Arrays.asList(surface), new CameraCaptureSession.StateCallback() {
                 @Override
@@ -265,7 +265,20 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void takePicture(){
-
+        if(cameraDevice == null){
+            return;
+        }
+        CameraManager cameraManager = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
+        try{
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraDevice.getId());
+            Size[] jpegSizes = null;
+            if(characteristics != null){
+                jpegSizes = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
+            }
+            int width = VisionProcess
+        }catch(Exception e){
+            Log.e(null, Log.getStackTraceString(e), e);
+        }
     }
 
     private void takeVideo(){
@@ -297,7 +310,7 @@ public class MainActivity extends AppCompatActivity {
                         mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
 
                         mTextureView = findViewById(R.id.textureView);
-                        mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener) ;
+                        mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
 
                         mCameraButton.setOnClickListener(mOnCameraClickListener);
                         mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
@@ -320,12 +333,11 @@ public class MainActivity extends AppCompatActivity {
                     mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
 
                     mTextureView = findViewById(R.id.textureView);
-                    mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener) ;
+                    mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
 
                     mCameraButton.setOnClickListener(mOnCameraClickListener);
                     mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
                     mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
-
 
                 }else{
                     Toast toast = Toast.makeText(getApplicationContext(), "This application cannot function without storage permissions", Toast.LENGTH_SHORT);

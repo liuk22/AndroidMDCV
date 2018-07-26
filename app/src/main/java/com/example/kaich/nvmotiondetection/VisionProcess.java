@@ -17,16 +17,15 @@ public class VisionProcess {
     Scalar(180, 255, 197)
      */
 
-    private int xRes;
-    private int yRes;
+    private int xRes = 1280; //default max values
+    private int yRes = 720;
 
     private int brightness;
 
     private Mat mat;
 
-    public VisionProcess(int xRes, int yRes) {
-        this.xRes = xRes;
-        this.yRes = yRes;
+    public VisionProcess() {
+
     }
 
     private File analyze(File file){
@@ -51,6 +50,14 @@ public class VisionProcess {
         //get a "frame delta"
         //threshold it
         //bounding rect
+    }
+
+    public int getxRes(){
+        return xRes;
+    }
+
+    public int getyRes(){
+        return yRes;
     }
 
     private void setBrightness(int brightness){
