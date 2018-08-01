@@ -35,6 +35,7 @@ import android.support.v7.widget.Toolbar;
 import android.widget.Toast;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -43,7 +44,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.UUID;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON EXCEPTIONS
 
     //UI
     private Toolbar mTopToolbar;
@@ -152,7 +153,6 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onOpened(@NonNull CameraDevice camera) {
             cameraDevice = camera;
-            assert mTextureView.isAvailable();
             openCameraAndPreview();
         }
 
@@ -222,7 +222,7 @@ public class MainActivity extends AppCompatActivity {
     private void openCameraAndPreview(){
         try {
             SurfaceTexture surfaceTexture = mTextureView.getSurfaceTexture();
-            surfaceTexture.setDefaultBufferSize(imageDimension.getWidth(), imageDimension.getHeight());//null???
+            surfaceTexture.setDefaultBufferSize(imageDimension.getWidth(), imageDimension.getHeight());
             Surface surface = new Surface(surfaceTexture);
             captureRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
             captureRequestBuilder.addTarget(surface);
@@ -241,8 +241,8 @@ public class MainActivity extends AppCompatActivity {
                     toast.show();
                 }
             }, null);
-        }catch(Exception e){
-            Log.e(null,Log.getStackTraceString(e), e);
+        }catch(CameraAccessException e){
+            Log.e(null,"openCameraAndPreview() failed", e);
         }
     }
 
@@ -257,8 +257,8 @@ public class MainActivity extends AppCompatActivity {
             imageDimension = map.getOutputSizes(SurfaceTexture.class)[0];
             cameraManager.openCamera(cameraId, stateCallBack, null); //permissions have already been previously checked in onCreate()
 
-        }catch(Exception e){
-            Log.e(null, Log.getStackTraceString(e), e);
+        }catch(CameraAccessException e){
+            Log.e(null, "updateCamera(int cameraIndex) failed", e);
         }
     }
 
@@ -271,8 +271,8 @@ public class MainActivity extends AppCompatActivity {
         captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO);
         try{
             cameraCaptureSession.setRepeatingRequest(captureRequestBuilder.build(),null, backgroundHandler);
-        }catch(Exception e){
-            Log.e(null, Log.getStackTraceString(e), e);
+        }catch(CameraAccessException e){
+            Log.e(null, "updatePreview() failed", e);
         }
     }
 
@@ -288,8 +288,8 @@ public class MainActivity extends AppCompatActivity {
                 jpegSizes = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP).getOutputSizes(ImageFormat.JPEG);
             }
             //default size
-            int width = visionProcess.getxRes();
-            int height = visionProcess.getyRes();
+            int width = visionProcess.getXRes();
+            int height = visionProcess.getYRes();
             if(jpegSizes != null && jpegSizes.length > 0){
                 width = jpegSizes[0].getWidth();
                 height = jpegSizes[0].getHeight();
@@ -304,6 +304,7 @@ public class MainActivity extends AppCompatActivity {
             captureRequestBuilder.set(CaptureRequest.CONTROL_MODE, CameraMetadata.CONTROL_MODE_AUTO );
 
             //should bother checking orientation?
+
             file = new File(Environment.getExternalStorageDirectory() + "/" + UUID.randomUUID().toString() + ".jpg");
             ImageReader.OnImageAvailableListener imageReaderListener = new ImageReader.OnImageAvailableListener(){
                 @Override
@@ -315,10 +316,11 @@ public class MainActivity extends AppCompatActivity {
                         byte[] bytes = new byte[buffer.capacity()];
                         buffer.get(bytes);
                         save(bytes);
-                    }catch(Exception e){
-                        Log.e(null, Log.getStackTraceString(e), e);
-                    }
-                    finally{
+                    }catch(FileNotFoundException e){
+                        Log.e(null, "onImageAvailable(ImageReader imageReader) failed", e);
+                    }catch(IOException e){
+                        Log.e(null, "onImageReader(ImageReader imageReader) failed", e);
+                    }finally{
                         if(image != null){
                             image.close();
                         }
@@ -353,20 +355,20 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession session) {
                     try{
-                        cameraCaptureSession.capture(captureRequestBuilder.build(), captureCallbackListener, backgroundHandler);
-                    }catch(Exception e){
-                        Log.e(null, Log.getStackTraceString(e), e);
+                        session.capture(captureRequestBuilder.build(), captureCallbackListener, backgroundHandler);
+                    }catch(CameraAccessException e){
+                        Log.e(null,"onConfigured(@NonNull CameraCaptureSession session) failed", e);
                     }
                 }
 
                 @Override
                 public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-
+                    Log.e(null, "onConfigureFailed(@NonNull CameraCaptureSession session) triggered");
                 }
             }, backgroundHandler);
 
         }catch(CameraAccessException e){
-            Log.e(null, Log.getStackTraceString(e), e);
+            Log.e(null, "takePicture() failed", e);
         }
     }
 

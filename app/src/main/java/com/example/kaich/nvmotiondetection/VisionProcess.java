@@ -52,11 +52,11 @@ public class VisionProcess {
         //bounding rect
     }
 
-    public int getxRes(){
+    public int getXRes(){
         return xRes;
     }
 
-    public int getyRes(){
+    public int getYRes(){
         return yRes;
     }
 
