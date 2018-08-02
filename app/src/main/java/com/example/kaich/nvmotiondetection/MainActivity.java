@@ -44,6 +44,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.UUID;
 
+import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+
 public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON EXCEPTIONS
 
     //UI
@@ -138,8 +140,8 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
     };
 
     //permissions
-    private static final int MY_PERMISSIONS_REQUEST_CAMERA = 500;
-    private static final int MY_PERMISSIONS_REQUEST_STORAGE = 600;
+    private static final String[] MY_PERMISSIONS = {Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO};
+    private static final int MY_PERMISSIONS_CONSTANT = 1; //this is arbitrary
 
     //camera
     private boolean MY_RECORDING_TYPE = true; //true for photo, false for video
@@ -198,25 +200,7 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
 
         //listeners not set until permissions granted
 
-        if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA},MY_PERMISSIONS_REQUEST_CAMERA);
-        }else if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
-        }else{
-            //all permissions already granted
-
-            mSeekBar.setOnSeekBarChangeListener((mOnSeekBarChangeListener));
-            mSunBrightness.setOnClickListener(mOnSunBrightnessClickListnener);
-            mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
-
-            mTextureView = findViewById(R.id.textureView);
-            mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
-
-            mCameraButton.setOnClickListener(mOnCameraClickListener);
-            mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
-            mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
-
-        }
+        requestPermissions();
     }
 
     private void openCameraAndPreview(){
@@ -384,57 +368,41 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
 
     }
 
+    private void requestPermissions(){
+        ArrayList<String> neededPermissions = new ArrayList<String>();
+        for(String permission: MY_PERMISSIONS){
+            if(ContextCompat.checkSelfPermission(this,permission) == PERMISSION_GRANTED){
+                neededPermissions.add(permission);
+            }
+        }
+        String[] neededPermissionsArray = neededPermissions.toArray(new String[0]);
+        ActivityCompat.requestPermissions(this, neededPermissionsArray,MY_PERMISSIONS_CONSTANT);
+
+    }
+
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        boolean cleared = true;
+        for(int i = 0; i < grantResults.length; i++) {
+            if (grantResults[i] != PERMISSION_GRANTED) {
+                cleared = false;
+                break;
+            }
+        }
+        if(cleared){ //set listeners once permissions granted
+            mSeekBar.setOnSeekBarChangeListener(mOnSeekBarChangeListener);
+            mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
+            mSunBrightness.setOnClickListener(mOnSunBrightnessClickListnener);
 
-        switch(requestCode){
-            case MY_PERMISSIONS_REQUEST_CAMERA: //consecutive permission requests
-                if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
+            mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
 
-                    if(ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED){
-                        ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_STORAGE);
-                    }else{
-                        //permission already granted
-
-                        mSeekBar.setOnSeekBarChangeListener((mOnSeekBarChangeListener));
-                        mSunBrightness.setOnClickListener(mOnSunBrightnessClickListnener);
-                        mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
-
-                        mTextureView = findViewById(R.id.textureView);
-                        mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
-
-                        mCameraButton.setOnClickListener(mOnCameraClickListener);
-                        mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
-                        mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
-
-                    }
-
-                }else{
-                    Toast toast = Toast.makeText(getApplicationContext(), "This application cannot function without camera permissions", Toast.LENGTH_SHORT);
-                    toast.show();
-                }
-                return;
-            case MY_PERMISSIONS_REQUEST_STORAGE: //can also feed from if user exited after first permission
-                if(grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED){
-
-                    //all permissions granted, enable functionality
-
-                    mSeekBar.setOnSeekBarChangeListener((mOnSeekBarChangeListener));
-                    mSunBrightness.setOnClickListener(mOnSunBrightnessClickListnener);
-                    mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
-
-                    mTextureView = findViewById(R.id.textureView);
-                    mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
-
-                    mCameraButton.setOnClickListener(mOnCameraClickListener);
-                    mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
-                    mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
-
-                }else{
-                    Toast toast = Toast.makeText(getApplicationContext(), "This application cannot function without storage permissions", Toast.LENGTH_SHORT);
-                    toast.show();
-                }
-                return;
+            mCameraButton.setOnClickListener(mOnCameraClickListener);
+            mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
+            mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
+        }else{
+            Toast toast = Toast.makeText(this,"Permissions not granted, app needs all permissions in order to run", Toast.LENGTH_SHORT);
+            toast.show();
+            toast.cancel();
         }
 
     }
