@@ -19,27 +19,32 @@ public class VisionProcess {
 
     private int xRes = 1280; //default max values
     private int yRes = 720;
+    private int fps = 30;
 
     private int brightness;
 
-    private Mat mat;
+    private VideoCapture vc;
+    private File file;
+    private String absoluteFilePath;
 
-    public VisionProcess() {
-
+    public VisionProcess(File file){
+        this.file = file;
+        absoluteFilePath = file.getAbsolutePath();
+        //determine
     }
 
-    private File analyze(File file){
-
-        return file;
+    private File analyze(){
+        //should return replacement for file input - image or video
     }
 
     private void imageAnalysis(){
-
+        //only gamma correction? cannot do motion detection with single frame post-capture
     }
 
-    private void videoAnalysis(int cameraId){ //no idea what format cameraId for Android
-        VideoCapture videoCapture = new VideoCapture(cameraId);
+    private void videoAnalysis(){
+        //read in File as video
         //check if it was opened
+        VideoCapture videoCapture = new VideoCapture(absoluteFilePath); //Android only uses MJPG fourcc
 
         while(true){ //inject Thread.sleep or whatever necessary to allow for frame skips, performance etc.
             Mat frame = new Mat();
@@ -50,6 +55,12 @@ public class VisionProcess {
         //get a "frame delta"
         //threshold it
         //bounding rect
+
+        //end by applying histogram and then gamma correction
+    }
+
+    public void setBrightness(int brightness){
+        this.brightness = brightness;
     }
 
     public int getXRes(){
@@ -60,8 +71,8 @@ public class VisionProcess {
         return yRes;
     }
 
-    private void setBrightness(int brightness){
-
+    public int getFPS(){
+        return fps;
     }
 
 

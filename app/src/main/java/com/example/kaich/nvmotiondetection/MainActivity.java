@@ -16,10 +16,12 @@ import android.hardware.camera2.TotalCaptureResult;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.media.Image;
 import android.media.ImageReader;
+import android.media.MediaRecorder;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
+import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -42,11 +44,12 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 
-public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON EXCEPTIONS
+public class MainActivity extends AppCompatActivity {
 
     //UI
     private Toolbar mTopToolbar;
@@ -84,6 +87,7 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
     private TextureView.SurfaceTextureListener mTextureViewSurfaceListener = new TextureView.SurfaceTextureListener() {
         @Override
         public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+
             updateCamera(MY_CAMERA_INDEX);
         }
 
@@ -111,7 +115,7 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
             if(MY_RECORDING_TYPE){
                 takePicture();
             }else{
-                takeVideo();
+                takeVideo(isRecordingVideo);
             }
         }
     };
@@ -144,11 +148,10 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
     private static final int MY_PERMISSIONS_CONSTANT = 1; //this is arbitrary
 
     //camera
-    private boolean MY_RECORDING_TYPE = true; //true for photo, false for video
     private int MY_CAMERA_INDEX = 0; //0 is front facing
+    private boolean MY_RECORDING_TYPE = true; //true for photo, false for video
+    private boolean isRecordingVideo = false;
     private CameraDevice cameraDevice;
-    private ImageReader imageReader;
-    private Size imageDimension;
     private CaptureRequest.Builder captureRequestBuilder;
     private CameraCaptureSession cameraCaptureSession;
     private CameraDevice.StateCallback stateCallBack = new CameraDevice.StateCallback() {
@@ -169,12 +172,19 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
             cameraDevice = null;
         }
     };
+    private MediaRecorder mediaRecorder;
+    private String nextVideoAbsolutePath;
+    private ImageReader imageReader;
+    private Size imageDimension;
+    private Size videoDimension;
+    private Size previewDimension;
+    private Integer sensorOrientation;
+
 
     //vision
     private VisionProcess visionProcess = new VisionProcess();
 
     //file storage
-    private File file;
     private Handler backgroundHandler;
     private HandlerThread backgroundThread;
 
@@ -199,8 +209,26 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
         mSwitchCameraButton = findViewById(R.id.switchCameraButton);
 
         //listeners not set until permissions granted
-
         requestPermissions();
+    }
+
+    @Override
+    protected void onResume(){
+        super.onResume();
+        Log.e(null, "onResume() called");
+        startBackgroundThread();
+        if(mTextureView.isAvailable()){
+            updateCamera(MY_CAMERA_INDEX);
+        }else{
+            mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
+        }
+    }
+
+    @Override
+    protected void onPause(){
+        Log.e(null, "onPause() called");
+        stopBackgroundThread();
+        super.onPause();
     }
 
     private void openCameraAndPreview(){
@@ -230,23 +258,8 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
         }
     }
 
-    private void updateCamera(int cameraIndex){ //cameraIndex = 0 is main camera, 1 should be rear facing
-        MY_CAMERA_INDEX = cameraIndex;
-        CameraManager cameraManager = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
-        try{
-            String cameraId = cameraManager.getCameraIdList()[cameraIndex];
-            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
-            StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            assert map != null;
-            imageDimension = map.getOutputSizes(SurfaceTexture.class)[0];
-            cameraManager.openCamera(cameraId, stateCallBack, null); //permissions have already been previously checked in onCreate()
-
-        }catch(CameraAccessException e){
-            Log.e(null, "updateCamera(int cameraIndex) failed", e);
-        }
-    }
-
     private void updatePreview(){
+
         if(cameraDevice == null){
             Toast toast = Toast.makeText(this,"Error: CameraDevice not found", Toast.LENGTH_SHORT);
             toast.show();
@@ -258,6 +271,44 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
         }catch(CameraAccessException e){
             Log.e(null, "updatePreview() failed", e);
         }
+    }
+
+    private void closePreview(){
+        if(cameraCaptureSession != null){
+            cameraCaptureSession.close();
+            cameraCaptureSession = null;
+        }
+    }
+
+    private void updateCamera(int cameraIndex){ //cameraIndex = 0 is main camera, 1 should be rear facing
+        MY_CAMERA_INDEX = cameraIndex;
+        CameraManager cameraManager = (CameraManager)getSystemService(Context.CAMERA_SERVICE);
+        try{
+            String cameraId = cameraManager.getCameraIdList()[cameraIndex];
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+            StreamConfigurationMap map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+
+            imageDimension = map.getOutputSizes(SurfaceTexture.class)[0];
+            sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+
+            //TODO: SET PREVIEWSIZE here
+            for(Size size: map.getOutputSizes(MediaRecorder.class)){
+                if(size.getWidth() == size.getHeight() * 4 / 3 && size.getWidth() <= 1080){ //3 by 4 aspect ratio, 1080p is limit for MediaRecorder
+                    //TODO: CHECK COMPATIBILITY WITH CURRENT LAYOUTS/PREVIEW
+                    videoDimension = size;
+                    break;
+                }
+            }
+
+            cameraManager.openCamera(cameraId, stateCallBack, null); //permissions have already been previously checked in onCreate()
+
+        }catch(CameraAccessException e){
+            Log.e(null, "updateCamera(int cameraIndex) failed", e);
+        }
+    }
+
+    private void closeCamera(){
+
     }
 
     private void takePicture(){
@@ -278,6 +329,7 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
                 width = jpegSizes[0].getWidth();
                 height = jpegSizes[0].getHeight();
             }
+
             ImageReader reader = ImageReader.newInstance(width, height, ImageFormat.JPEG, 1);
             ArrayList<Surface> outputSurface = new ArrayList<>(2);
             outputSurface.add(reader.getSurface());
@@ -289,7 +341,7 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
 
             //should bother checking orientation?
 
-            file = new File(Environment.getExternalStorageDirectory() + "/" + UUID.randomUUID().toString() + ".jpg");
+            final File file = new File(Environment.getExternalStorageDirectory() + "/" + UUID.randomUUID().toString() + ".jpg");
             ImageReader.OnImageAvailableListener imageReaderListener = new ImageReader.OnImageAvailableListener(){
                 @Override
                 public void onImageAvailable(ImageReader imageReader){
@@ -324,8 +376,8 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
                     }
                 }
             };
-
             reader.setOnImageAvailableListener(imageReaderListener, backgroundHandler);
+
             final CameraCaptureSession.CaptureCallback captureCallbackListener = new CameraCaptureSession.CaptureCallback() {
                 @Override
                 public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
@@ -335,7 +387,7 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
                 }
             };
 
-            cameraDevice.createCaptureSession(outputSurface, new CameraCaptureSession.StateCallback() {
+            cameraDevice.createCaptureSession(outputSurface, new CameraCaptureSession.StateCallback() { //TODO: TAKEPICTURE() BREAKS HERE
                 @Override
                 public void onConfigured(@NonNull CameraCaptureSession session) {
                     try{
@@ -356,28 +408,97 @@ public class MainActivity extends AppCompatActivity { //TODO: UNNULL THE TAGS ON
         }
     }
 
-    private void takeVideo(){
+    private void takeVideo(boolean isRecordingVideo){
+        if(isRecordingVideo){
+
+        }else{
+            if(cameraDevice == null){
+                return;
+            }
+            try{
+                closePreview();
+                initMediaRecorder();
+                SurfaceTexture surfaceTexture = mTextureView.getSurfaceTexture();
+                //choose a suitable size where params are at least as large as desired, but smallest out of them
+                List<Size> desiredSizes =
+                for(Size )
+
+                surfaceTexture.setDefaultBufferSize();
+            }catch(CameraAccessException | IOException e){
+                Log.e(null, "takeVideo(false) failed", e);
+            }
+        }
+    }
+
+    private void initMediaRecorder() throws IOException{
+
+        //getActivity?
+
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setVideoSource(MediaRecorder.VideoSource.SURFACE);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        if(nextVideoAbsolutePath == null || nextVideoAbsolutePath.isEmpty()){
+            nextVideoAbsolutePath = getVideoFilePath(this)
+        }
+        mediaRecorder.setOutputFile(nextVideoAbsolutePath);
+        mediaRecorder.setVideoEncodingBitRate(1000000); //why this number?
+        mediaRecorder.setVideoFrameRate(visionProcess.getFPS());
+        mediaRecorder.setVideoSize(videoDimension.getWidth(), videoDimension.getHeight());
+        mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264); //TODO: WHAT IS THIS?
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+        int rotation = getWindowManager().getDefaultDisplay().getRotation(); //get rotation?
+
+        //TODO: ADD SENSORORIENTATION SWITCH STATEMENT?
+
+        mediaRecorder.prepare();
 
     }
 
-    private void closeCamera(){
-
+    protected void startBackgroundThread(){
+        backgroundThread = new HandlerThread("Camera Background");
+        backgroundThread.start();
+        backgroundHandler = new Handler(backgroundThread.getLooper());
     }
 
-    private void backgroundThread(){
+    protected void stopBackgroundThread(){
+        backgroundThread.quitSafely();
+        try{
+            backgroundThread.join();
+            backgroundThread = null;
+            backgroundHandler = null;
+        }catch(InterruptedException e){
+            Log.e(null, "stopBackgroundThread() failed", e);
+        }
+    }
 
+    private String getVideoFilePath(Context context){
+        final File dir = context.getExternalFilesDir(null);
+        return (dir == null ? "" : (dir.getAbsolutePath() + "/")) + System.currentTimeMillis() + ".mp4";
     }
 
     private void requestPermissions(){
         ArrayList<String> neededPermissions = new ArrayList<String>();
         for(String permission: MY_PERMISSIONS){
-            if(ContextCompat.checkSelfPermission(this,permission) == PERMISSION_GRANTED){
+            if(ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED){
                 neededPermissions.add(permission);
             }
         }
-        String[] neededPermissionsArray = neededPermissions.toArray(new String[0]);
-        ActivityCompat.requestPermissions(this, neededPermissionsArray,MY_PERMISSIONS_CONSTANT);
 
+        if(neededPermissions.size() == 0){
+
+            mSeekBar.setOnSeekBarChangeListener(mOnSeekBarChangeListener);
+            mMoonBrightness.setOnClickListener(mOnMoonBrightnessClickListener);
+            mSunBrightness.setOnClickListener(mOnSunBrightnessClickListnener);
+
+            mTextureView.setSurfaceTextureListener(mTextureViewSurfaceListener);
+
+            mCameraButton.setOnClickListener(mOnCameraClickListener);
+            mRecordTypeButton.setOnClickListener(mOnRecordTypeClickListener);
+            mSwitchCameraButton.setOnClickListener(mOnSwitchCameraClickListener);
+        }else {
+            String[] neededPermissionsArray = neededPermissions.toArray(new String[0]);
+            ActivityCompat.requestPermissions(this, neededPermissionsArray, MY_PERMISSIONS_CONSTANT);
+        }
     }
 
     @Override
