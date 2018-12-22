@@ -7,122 +7,65 @@
     android:layout_height="match_parent"
     tools:context=".MainActivity">
 
-    <android.support.v7.widget.Toolbar
-        android:id="@+id/topToolbar"
-        android:layout_width="match_parent"
-        android:layout_height="48dp"
-        android:layout_marginEnd="0dp"
-        android:layout_marginStart="0dp"
-        android:background="?android:attr/colorPrimary"
-        android:minHeight="?attr/actionBarSize"
-        android:theme="?attr/actionBarTheme"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
 
-    <ImageButton
-        android:id="@+id/sunBrightness"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginEnd="24dp"
-        android:layout_marginStart="12dp"
-        android:background="?android:attr/colorPrimary"
-        app:layout_constraintEnd_toStartOf="@+id/seekBar"
+    <LinearLayout
+        android:id="@+id/linearLayoutEntire"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintHorizontal_bias="1.0"
-        app:layout_constraintStart_toStartOf="@+id/topToolbar"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:layout_constraintBottom_toBottomOf="@+id/topToolbar"
-        app:srcCompat="@drawable/ic_sun_brightness_24dp" />
+        app:layout_constraintVertical_bias="0.0">
 
-    <ImageButton
-        android:id="@+id/moonBrightness"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:background="?android:attr/colorPrimary"
-        app:layout_constraintBottom_toBottomOf="@+id/topToolbar"
-        app:layout_constraintEnd_toEndOf="@+id/topToolbar"
-        app:layout_constraintStart_toEndOf="@+id/seekBar"
-        app:layout_constraintTop_toTopOf="parent"
-        app:srcCompat="@drawable/ic_moon_brightness_24dp" />
-    <SeekBar
-        android:id="@+id/seekBar"
-        style="@style/Widget.AppCompat.SeekBar.Discrete"
-        android:background="?android:attr/windowBackground"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_marginEnd="72dp"
-        android:layout_marginStart="72dp"
-        android:layout_marginTop="16dp"
-        android:max="5"
-        android:progress="3"
-        app:layout_constraintEnd_toEndOf="@+id/topToolbar"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        <VideoView
+            android:id="@+id/videoView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            tools:layout_editor_absoluteX="32dp"
+            tools:layout_editor_absoluteY="0dp" />
 
-    <android.support.v7.widget.Toolbar
-        android:id="@+id/bottomToolbar"
-        android:layout_width="match_parent"
-        android:layout_height="72dp"
-        android:background="?android:attr/colorPrimary"
-        android:minHeight="?attr/actionBarSize"
-        android:theme="?attr/actionBarTheme"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.0"
-        app:layout_constraintStart_toStartOf="parent" />
+        <android.support.design.widget.BottomNavigationView
+            android:id="@+id/bottomNavigationView"
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:layout_weight="1">
 
-    <ImageButton
-        android:id="@+id/cameraButton"
-        android:layout_width="80dp"
-        android:layout_height="72dp"
-        android:background="?android:attr/colorPrimary"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@+id/bottomToolbar"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/bottomToolbar"
-        app:layout_constraintVertical_bias="0.0"
-        app:srcCompat="@drawable/ic_hexagon_72dp" />
 
-    <ImageButton
-        android:id="@+id/recordTypeButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="6dp"
-        android:layout_marginEnd="8dp"
-        android:layout_marginTop="8dp"
-        android:background="?android:attr/colorPrimary"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/cameraButton"
-        app:layout_constraintStart_toStartOf="@+id/bottomToolbar"
-        app:layout_constraintTop_toTopOf="@+id/cameraButton"
-        app:srcCompat="@drawable/ic_photo_mode_48dp" />
+            <LinearLayout
+                android:id="@+id/linearLayoutNavigation"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="horizontal">
 
-    <ImageButton
-        android:id="@+id/switchCameraButton"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="8dp"
-        android:layout_marginEnd="16dp"
-        android:layout_marginStart="8dp"
-        android:layout_marginTop="8dp"
-        android:background="?android:attr/colorPrimary"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="@+id/bottomToolbar"
-        app:layout_constraintHorizontal_bias="0.593"
-        app:layout_constraintStart_toEndOf="@+id/cameraButton"
-        app:layout_constraintTop_toTopOf="@+id/cameraButton"
-        app:srcCompat="@drawable/ic_switch_camera_48dp" />
+                <Button
+                    android:id="@+id/chooseVideoBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="@string/choose_video_button" />
 
-    <TextureView
-        android:id="@+id/textureView"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/bottomToolbar"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/topToolbar" />
+                <Button
+                    android:id="@+id/analyzeVideoBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="@string/analyze_video_button" />
 
+                <Button
+                    android:id="@+id/saveVideoBtn"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:text="@string/save_video_button" />
+
+            </LinearLayout>
+
+        </android.support.design.widget.BottomNavigationView>
+
+    </LinearLayout>
 
 </android.support.constraint.ConstraintLayout>
