@@ -5,6 +5,10 @@ import android.util.DisplayMetrics;
 public class PhotoTools {
 
     public static final int RESULT_LOAD_VIDEO = 0;
+    public static final String ANALZYED_VIDEO_FILE_TAG = "_analyzedNVMD";
+
+    public static final String FOURCC = "H264";
+    public static final String FILE_EXTENSION = ".mp4"; //Don't know if these work yet
 
     private DisplayMetrics displayMetrics;
 

@@ -3,9 +3,11 @@ package com.example.kaich.nvmotiondetection;
 import android.Manifest;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.CharArrayBuffer;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
 import android.provider.MediaStore;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
@@ -13,6 +15,7 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -21,6 +24,7 @@ import android.widget.Toast;
 import android.widget.VideoView;
 
 
+import java.io.File;
 import java.util.ArrayList;
 
 import static android.content.pm.PackageManager.PERMISSION_GRANTED;
@@ -47,6 +51,7 @@ public class MainActivity extends AppCompatActivity {
 
     //file storage
     private Uri currentVideoURI;
+    private String currentVideoPath;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -104,6 +109,7 @@ public class MainActivity extends AppCompatActivity {
     private void initializeFunctionality(){
         mVideoView = findViewById(R.id.videoView);
         mediaController = new MediaController(this);
+        mVideoView.setMediaController(mediaController);
         mediaController.setAnchorView(mVideoView);
 
         mBottomNavigationView = findViewById(R.id.bottomNavigationView);
@@ -116,12 +122,41 @@ public class MainActivity extends AppCompatActivity {
                 startActivityForResult(intent, photoTools.RESULT_LOAD_VIDEO);
             }
         });
+
         mAnalyzeVideoBtn = findViewById(R.id.analyzeVideoBtn);
         mAnalyzeVideoBtn.setEnabled(false);
         mAnalyzeVideoBtn.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
+                if(currentVideoURI != null && !(currentVideoURI.getPath().contains(PhotoTools.ANALZYED_VIDEO_FILE_TAG))){
+                    //TASK handle this functionality
 
+                    StringBuilder fileNameStringBuilder = new StringBuilder();
+                    int count = currentVideoPath.length() - 1 - 4; //cut out the .mp4 extension
+                    while(!(currentVideoPath.charAt(count) == '/')){
+                        fileNameStringBuilder.append(currentVideoPath.charAt(count)); //TASK THE STRINGBUILDER IS RUNNING OUT OF MEMORY?!
+                        count -= 1;
+                    }
+                    char[] fileNameArray = fileNameStringBuilder.toString().toCharArray();
+                    for(int i = 0; i <  fileNameArray.length/2; i++){
+                        fileNameArray[0] = fileNameArray[fileNameArray.length - 1 - i];
+                    }
+                    File file = null;
+                    try{
+                        String fileName = fileNameStringBuilder.toString();
+                        file = new File(Environment.getExternalStorageDirectory().toString() + fileName);
+                    } catch (Exception e){
+                        Log.e("ttttttttttt" + fileNameStringBuilder.toString(), e.getMessage());
+                    }
+
+                    visionProcess.analyzeAndWrite(currentVideoPath, file.getPath());
+
+                    mVideoView.setVideoURI(Uri.fromFile(file));
+
+                    Log.e("tttttt", file.getAbsolutePath());
+
+                    mSaveVideoBtn.setEnabled(true);
+                }
             }
         });
         mSaveVideoBtn = findViewById(R.id.saveVideoBtn);
@@ -129,10 +164,12 @@ public class MainActivity extends AppCompatActivity {
         mSaveVideoBtn.setOnClickListener(new View.OnClickListener(){
             @Override
             public void onClick(View v){
+                //TASK handle this functionality
+
 
             }
         });
-        //TASK handle enable/disable of save and analyze
+
     }
 
     @Override
@@ -140,16 +177,18 @@ public class MainActivity extends AppCompatActivity {
         if(requestCode == photoTools.RESULT_LOAD_VIDEO && resultCode == RESULT_OK  && !(data.equals(null))){
             currentVideoURI = data.getData();
 
-            //TASK does this block do anything?
             String[] filePathColumn = {MediaStore.Video.Media.DATA};
             Cursor cursor = getContentResolver().query(currentVideoURI, filePathColumn, null, null, null);
             cursor.moveToFirst();
             int columnIndex = cursor.getColumnIndex(filePathColumn[0]);
+            currentVideoPath = cursor.getString(columnIndex); //TASK what is the format of currentVideoPath String?
             cursor.close();
-            //
 
             mVideoView.setVideoURI(currentVideoURI);
+
+            mVideoView.start();
             mAnalyzeVideoBtn.setEnabled(true);
+
         }
     }
 }

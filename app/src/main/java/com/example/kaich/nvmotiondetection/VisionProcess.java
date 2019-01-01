@@ -24,17 +24,15 @@ public class VisionProcess {
     Scalar(180, 255, 197)
      */
 
-    public static String FOURCC = "H264";
-    public static String FILE_EXTENSION = ".avi"; //Don't know if these work yet
-    public static String ANALYZED_NAME_TAG = "analyzedNVMD";
+
 
     private int frameWidth = 1280; //must be modified depending on CameraDevice
     private int frameHeight = 720;
     private int FPS = 15;
 
-
     private int brightness;
     private int resetReferenceFactor = 2;
+    private double gammaCorrectionConstant = 4.0;
     private int gaussianPixelIntensity = 21;
     private int deltaFrameThreshold = 32;
     private int minContourArea = 600;
@@ -42,23 +40,20 @@ public class VisionProcess {
     private VideoCapture videoCapture = new VideoCapture();
     private VideoWriter videoWriter = new VideoWriter();
 
-    private String currentReadPath;
-
     public VisionProcess(){
         //TASK consider instance differences across devices, etc
     }
 
-    private void analyze(File inputFile){
+    public void analyzeAndWrite(String readPath, String writePath){ //TASK how will this work with including the file name?
 
-        //TASK return analyzed video
-        currentReadPath = inputFile.getAbsolutePath(); //TASK does this work properly? 
-
-        videoWriter.open(currentReadPath + ANALYZED_NAME_TAG + FILE_EXTENSION, VideoWriter.fourcc(FOURCC.charAt(0),FOURCC.charAt(1), FOURCC.charAt(2), FOURCC.charAt(3)),
-                FPS, new Size(frameWidth, frameHeight));
+        videoWriter.open(writePath,
+                VideoWriter.fourcc(PhotoTools.FOURCC.charAt(0),PhotoTools.FOURCC.charAt(1), PhotoTools.FOURCC.charAt(2), PhotoTools.FOURCC.charAt(3)),
+                FPS,
+                new Size(frameWidth, frameHeight));
 
         Mat referenceFrame = null;
 
-        videoCapture.open(currentReadPath);
+        videoCapture.open(readPath);
 
         int resetReferenceCount = 0;
         while(true) {
@@ -69,6 +64,8 @@ public class VisionProcess {
                 }
 
                 Imgproc.cvtColor(referenceFrame, referenceFrame, Imgproc.COLOR_BGR2GRAY);
+                Imgproc.equalizeHist(referenceFrame, referenceFrame); //increases contrast maybe too much
+                correctGamma(referenceFrame, gammaCorrectionConstant);
                 Imgproc.GaussianBlur(referenceFrame, referenceFrame, new Size(gaussianPixelIntensity, gaussianPixelIntensity), 0); // check on these numbers
 
             }else {
@@ -80,6 +77,8 @@ public class VisionProcess {
                 Mat colorFrame = currentFrame.clone();
 
                 Imgproc.cvtColor(currentFrame, currentFrame, Imgproc.COLOR_BGR2GRAY);
+                Imgproc.equalizeHist(currentFrame, currentFrame); //increases contrast maybe too much
+                correctGamma(currentFrame, gammaCorrectionConstant);
                 Imgproc.GaussianBlur(currentFrame, currentFrame, new Size(gaussianPixelIntensity, gaussianPixelIntensity), 0);
 
                 Mat deltaFrame = new Mat();
@@ -109,6 +108,21 @@ public class VisionProcess {
         }
     }
 
+    private void correctGamma(Mat image, double gamma){
+        //gamma corrects each pixel in the image. Currently for grayscale (1 channel == intensity) image
+
+        double inverseGamma = 1.0/gamma;
+        int[] lookupTable = new int[256];
+        for(int i = 0; i < lookupTable.length; i++) {
+            lookupTable[i] = (int)(Math.pow((i / 255.0), inverseGamma) * 255);
+        }
+        for(int row = 0; row < image.height(); row++) {
+            for(int col = 0; col < image.width(); col++) {
+                byte[] imageData = {(byte)lookupTable[(int) image.get(row, col)[0]], 0, 0};
+                image.put(row, col, imageData);	//image.get returns an array of the channel values
+            }
+        }
+    }
 
     public void setBrightness(int brightness){
         this.brightness = brightness;
