@@ -38,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout mLinearLayoutNavigation;
     private Button mChooseVideoBtn;
     private Button mAnalyzeVideoBtn;
-    private Button mSaveVideoBtn;
+
 
     //permissions
     private static final String[] MY_PERMISSIONS = {Manifest.permission.WRITE_EXTERNAL_STORAGE};
@@ -131,45 +131,35 @@ public class MainActivity extends AppCompatActivity {
                 if(currentVideoURI != null && !(currentVideoURI.getPath().contains(PhotoTools.ANALZYED_VIDEO_FILE_TAG))){
                     //TASK handle this functionality
 
-                    StringBuilder fileNameStringBuilder = new StringBuilder();
-                    int count = currentVideoPath.length() - 1 - 4; //cut out the .mp4 extension
-                    while(!(currentVideoPath.charAt(count) == '/')){
-                        fileNameStringBuilder.append(currentVideoPath.charAt(count)); //TASK THE STRINGBUILDER IS RUNNING OUT OF MEMORY?!
-                        count -= 1;
+                    int count1 = 0; //cut out the .mp4 extension
+                    for(int i = 0; i < currentVideoPath.length(); i++){
+                        if(currentVideoPath.charAt(i) == '/'){
+                            count1 = i;
+                        }
                     }
-                    char[] fileNameArray = fileNameStringBuilder.toString().toCharArray();
-                    for(int i = 0; i <  fileNameArray.length/2; i++){
-                        fileNameArray[0] = fileNameArray[fileNameArray.length - 1 - i];
+                    int count2 = currentVideoPath.length() - 1;
+                    while(currentVideoPath.charAt(count2) != '/') {
+                        count2 -= 1;
                     }
+                    String writePath = currentVideoPath.substring(0, count2);
+                    String fileName = currentVideoPath.substring(count1, currentVideoPath.length() - 4);
                     File file = null;
                     try{
-                        String fileName = fileNameStringBuilder.toString();
-                        file = new File(Environment.getExternalStorageDirectory().toString() + fileName);
+                        file = new File(writePath + fileName
+                                + PhotoTools.ANALZYED_VIDEO_FILE_TAG + PhotoTools.FILE_EXTENSION);
+                        file.mkdirs();
                     } catch (Exception e){
-                        Log.e("ttttttttttt" + fileNameStringBuilder.toString(), e.getMessage());
+                        Log.e("tttttt", e.getMessage());
                     }
-
-                    visionProcess.analyzeAndWrite(currentVideoPath, file.getPath());
+                    visionProcess.analyzeAndWrite(currentVideoPath, file.getAbsolutePath());
 
                     mVideoView.setVideoURI(Uri.fromFile(file));
 
                     Log.e("tttttt", file.getAbsolutePath());
 
-                    mSaveVideoBtn.setEnabled(true);
                 }
             }
         });
-        mSaveVideoBtn = findViewById(R.id.saveVideoBtn);
-        mSaveVideoBtn.setEnabled(false);
-        mSaveVideoBtn.setOnClickListener(new View.OnClickListener(){
-            @Override
-            public void onClick(View v){
-                //TASK handle this functionality
-
-
-            }
-        });
-
     }
 
     @Override

@@ -55,13 +55,6 @@
                     android:layout_weight="1"
                     android:text="@string/analyze_video_button" />
 
-                <Button
-                    android:id="@+id/saveVideoBtn"
-                    android:layout_width="wrap_content"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:text="@string/save_video_button" />
-
             </LinearLayout>
 
         </android.support.design.widget.BottomNavigationView>

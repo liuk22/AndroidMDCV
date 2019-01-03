@@ -6,6 +6,5 @@
     <string name="title_activity_main">MainActivity</string>
     <string name="video_view">videoView</string>
     <string name="choose_video_button">CHOOSE VIDEO</string>
-    <string name="analyze_video_button">ANALYZE VIDEO</string>
-    <string name="save_video_button">SAVE VIDEO</string>
+    <string name="analyze_video_button">ANALYZE AND SAVE VIDEO</string>
 </resources>
